@@ -19,7 +19,15 @@ Docker must have IPv6 enabled, and your LAN must provide all of the following on
 - IPv6 DHCPv6
 - Layer 2 connectivity for a separate container MAC address
 
-Example external macvlan network creation command:
+The values in `docker-compose.yml` are templates. Replace all of the following before deployment:
+
+- `parent: eth0`
+- `192.168.10.0/24`
+- `192.168.10.1`
+- `2001:db8:10::/64`
+- `2001:db8:10::1`
+
+Equivalent manual macvlan network creation command:
 
 ```bash
 docker network create -d macvlan \
@@ -34,24 +42,27 @@ docker network create -d macvlan \
 
 ## Deploy
 
-1. Pull and start the container:
+1. Update the template network values in `docker-compose.yml`.
+2. Pull and start the container:
 
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-2. Verify addressing inside the container:
+3. Verify addressing inside the container:
 
 ```bash
 docker exec -it warp ip -4 addr show dev eth0
 docker exec -it warp ip -6 addr show dev eth0
 ```
 
-3. Register and connect WARP for the first time:
+4. Register and connect WARP for the first time:
 
 ```bash
 docker exec -it warp warp-cli register
 docker exec -it warp warp-cli connect
 docker exec -it warp warp-cli status
 ```
+
+If you use the compose-managed network definition above, do not pre-create an external `warp_macvlan` network with conflicting settings.
