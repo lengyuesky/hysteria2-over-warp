@@ -5,10 +5,6 @@ log() {
   printf '%s %s\n' "[entrypoint]" "$*"
 }
 
-enable_ipv4_secondary_promotion() {
-  sysctl -w net.ipv4.conf.eth0.promote_secondaries=1 >/dev/null
-}
-
 cleanup_dhcp_state() {
   rm -f /run/dhclient.pid \
         /run/dhclient6.pid \
@@ -77,6 +73,32 @@ get_dhcp_ipv4() {
        END { if (addr) print addr }' /var/lib/dhcp/dhclient.leases
 }
 
+get_dhcp_router() {
+  awk '/^lease \{/ { in_lease = 1; next }
+       in_lease && /^  option routers / { gsub(/;/, "", $3); router = $3 }
+       /^}/ { in_lease = 0 }
+       END { if (router) print router }' /var/lib/dhcp/dhclient.leases
+}
+
+get_dhcp_prefix_len() {
+  awk '/^lease \{/ { in_lease = 1; next }
+       in_lease && /^  option subnet-mask / {
+         gsub(/;/, "", $3)
+         split($3, octets, ".")
+         bits = 0
+         for (i = 1; i <= 4; i++) {
+           n = octets[i] + 0
+           while (n > 0) {
+             bits += n % 2
+             n = int(n / 2)
+           }
+         }
+         prefix = bits
+       }
+       /^}/ { in_lease = 0 }
+       END { if (prefix) print prefix }' /var/lib/dhcp/dhclient.leases
+}
+
 cleanup_docker_ipv4() {
   dhcp_ipv4="$1"
 
@@ -85,6 +107,20 @@ cleanup_docker_ipv4() {
       ip addr del "$addr" dev eth0
     fi
   done
+}
+
+restore_dhcp_ipv4() {
+  dhcp_ipv4="$1"
+  dhcp_prefix_len="$2"
+  dhcp_router="$3"
+
+  if ! ip -4 -o addr show dev eth0 scope global | awk '/inet / {print $4}' | grep -q "^${dhcp_ipv4}/"; then
+    ip addr add "$dhcp_ipv4/$dhcp_prefix_len" dev eth0
+  fi
+
+  if [ -n "$dhcp_router" ]; then
+    ip route replace default via "$dhcp_router" dev eth0
+  fi
 }
 
 request_ipv6() {
@@ -111,16 +147,18 @@ main() {
   request_ipv4
 
   dhcp_ipv4="$(get_dhcp_ipv4)"
-  if [ -z "$dhcp_ipv4" ]; then
-    log "failed to determine dhcp ipv4 address"
+  dhcp_router="$(get_dhcp_router)"
+  dhcp_prefix_len="$(get_dhcp_prefix_len)"
+  if [ -z "$dhcp_ipv4" ] || [ -z "$dhcp_prefix_len" ]; then
+    log "failed to determine dhcp ipv4 lease details"
     exit 1
   fi
 
-  log "enabling ipv4 secondary promotion"
-  enable_ipv4_secondary_promotion
-
   log "removing docker-provided ipv4 addresses"
   cleanup_docker_ipv4 "$dhcp_ipv4"
+
+  log "restoring dhcp ipv4 address and route"
+  restore_dhcp_ipv4 "$dhcp_ipv4" "$dhcp_prefix_len" "$dhcp_router"
 
   log "waiting for ipv6 autoconfiguration readiness"
   wait_for_ipv6_link_local
