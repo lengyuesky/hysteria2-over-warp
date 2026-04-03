@@ -54,6 +54,12 @@ request_ipv4() {
   dhclient -4 -v eth0
 }
 
+request_ipv6() {
+  if ! dhclient -6 -v eth0; then
+    log "dhcpv6 request failed; continuing with automatic ipv6 state"
+  fi
+}
+
 start_warp() {
   warp-svc
 }
@@ -73,6 +79,9 @@ main() {
 
   log "waiting for ipv6 autoconfiguration readiness"
   wait_for_ipv6_link_local
+
+  log "requesting optional dhcpv6 lease"
+  request_ipv6
 
   log "starting warp-svc"
   start_warp &
