@@ -12,6 +12,7 @@ RUN apt-get update \
         iputils-ping \
         isc-dhcp-client \
         procps \
+    && mkdir -p /var/lib/dhcp \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p --mode=0755 /usr/share/keyrings \
