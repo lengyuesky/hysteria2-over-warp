@@ -64,7 +64,7 @@
 - 至少发布两个 tag：
   - `latest`
   - `sha-<shortsha>`
-- Compose 默认引用：`ghcr.io/<github-owner>/<repo>:latest`
+- Compose 默认引用：`ghcr.io/lengyuesky/hysteria2-over-warp:latest`
 
 设计取舍：
 - 采用 GHCR，因为用户已明确指定 GHCR，且与 GitHub Actions 权限集成最直接
@@ -102,7 +102,7 @@
 职责：定义容器运行参数与 macvlan 网络模板。
 
 关键配置：
-- 使用 `image: ghcr.io/<github-owner>/<repo>:latest`
+- 使用 `image: ghcr.io/lengyuesky/hysteria2-over-warp:latest`
 - 不使用本地 `build:`
 - `cap_add: [NET_ADMIN]`
 - `devices: ["/dev/net/tun:/dev/net/tun"]`
@@ -125,7 +125,7 @@
 
 ## 数据流 / 启动流
 1. 开发者将代码 push 到 `main`
-2. GitHub Actions 构建镜像并推送到 `ghcr.io/<github-owner>/<repo>`
+2. GitHub Actions 构建镜像并推送到 `ghcr.io/lengyuesky/hysteria2-over-warp`
 3. 用户按实际环境调整 compose 中的 `parent`、IPv4 subnet/gateway、IPv6 subnet/gateway
 4. Compose 拉取 `:latest` 镜像并创建 macvlan 网络，把容器网卡接入该网络
 5. entrypoint 在容器内对 `eth0` 发送 DHCPv4/DHCPv6 请求
@@ -149,7 +149,7 @@
 1. GitHub Actions 在 `main` push 后成功构建并推送 GHCR 镜像
 2. GHCR 中存在 `latest` 与 `sha-<shortsha>` tag
 3. 用户替换 compose 中的模板网络参数后，`docker compose config` 可成功渲染
-4. Compose 可成功拉取 `ghcr.io/<github-owner>/<repo>:latest`
+4. Compose 可成功拉取 `ghcr.io/lengyuesky/hysteria2-over-warp:latest`
 5. 容器启动后 `ip -4 addr show dev eth0` 能看到 DHCPv4 地址
 6. 容器启动后 `ip -6 addr show dev eth0` 能看到通过 DHCPv6 获取到的地址
 7. `warp-svc` 进程存在
@@ -164,7 +164,7 @@
 - IPv6 要求：必须 DHCPv6，不接受仅 RA/SLAAC
 - 镜像仓库：GHCR
 - 发布规则：push 到 `main` 时推送 `latest` 和 `sha-<shortsha>`
-- Compose 镜像引用：`ghcr.io/<github-owner>/<repo>:latest`
+- Compose 镜像引用：`ghcr.io/lengyuesky/hysteria2-over-warp:latest`
 - macvlan 参数写法：在 compose 中直接定义网络模板，并在 README 中保留等价的手动创建命令
 
 ## 风险
