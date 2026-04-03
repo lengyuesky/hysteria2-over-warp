@@ -50,6 +50,18 @@ wait_for_ipv6_link_local() {
   done
 }
 
+wait_for_ipv6_default_route() {
+  i=0
+  while ! ip -6 route show dev eth0 | grep -q 'default via fe80:'; do
+    i=$((i + 1))
+    if [ "$i" -ge 20 ]; then
+      log "ipv6 default route not ready on eth0"
+      return
+    fi
+    sleep 1
+  done
+}
+
 request_ipv4() {
   dhclient -4 -v eth0
 }
@@ -79,6 +91,9 @@ main() {
 
   log "waiting for ipv6 autoconfiguration readiness"
   wait_for_ipv6_link_local
+
+  log "waiting for ipv6 default route readiness"
+  wait_for_ipv6_default_route
 
   log "requesting optional dhcpv6 lease"
   request_ipv6
