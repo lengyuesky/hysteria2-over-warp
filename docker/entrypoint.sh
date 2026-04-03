@@ -66,6 +66,14 @@ request_ipv4() {
   dhclient -4 -v eth0
 }
 
+cleanup_docker_ipv4() {
+  ip -4 addr show dev eth0 scope global | awk '/valid_lft forever/ {print $2}' | while read -r addr; do
+    if [ -n "$addr" ]; then
+      ip addr del "$addr" dev eth0
+    fi
+  done
+}
+
 request_ipv6() {
   if ! dhclient -6 -v eth0; then
     log "dhcpv6 request failed; continuing with automatic ipv6 state"
@@ -88,6 +96,9 @@ main() {
 
   log "requesting ipv4 lease"
   request_ipv4
+
+  log "removing docker-provided ipv4 addresses"
+  cleanup_docker_ipv4
 
   log "waiting for ipv6 autoconfiguration readiness"
   wait_for_ipv6_link_local
