@@ -5,6 +5,12 @@ log() {
   printf '%s %s\n' "[entrypoint]" "$*"
 }
 
+log_ipv4_state() {
+  label="$1"
+  log "$label addr: $(ip -4 -o addr show dev eth0 scope global 2>/dev/null | tr '\n' ';' || true)"
+  log "$label route: $(ip -4 route show dev eth0 2>/dev/null | tr '\n' ';' || true)"
+}
+
 cleanup_dhcp_state() {
   rm -f /run/dhclient.pid \
         /run/dhclient6.pid \
@@ -103,10 +109,15 @@ main() {
   log "cleaning dhcp state"
   cleanup_dhcp_state
 
+  log_ipv4_state "before dhcp"
+
   log "requesting ipv4 lease"
   request_ipv4
 
+  log_ipv4_state "after dhcp"
+
   dhcp_ipv4="$(get_dhcp_ipv4)"
+  log "parsed dhcp ipv4: ${dhcp_ipv4:-<empty>}"
   if [ -z "$dhcp_ipv4" ]; then
     log "failed to determine dhcp ipv4 address"
     exit 1
@@ -114,6 +125,8 @@ main() {
 
   log "removing docker-provided ipv4 addresses"
   cleanup_docker_ipv4 "$dhcp_ipv4"
+
+  log_ipv4_state "after cleanup"
 
   log "waiting for ipv6 autoconfiguration readiness"
   wait_for_ipv6_link_local
