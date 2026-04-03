@@ -67,7 +67,7 @@ request_ipv4() {
 }
 
 cleanup_docker_ipv4() {
-  ip -4 addr show dev eth0 scope global | awk '/valid_lft forever/ {print $2}' | while read -r addr; do
+  ip -4 -o addr show dev eth0 scope global | awk '/inet / && $0 !~ / dynamic / {print $4}' | while read -r addr; do
     if [ -n "$addr" ]; then
       ip addr del "$addr" dev eth0
     fi
