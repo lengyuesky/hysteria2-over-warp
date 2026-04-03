@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository builds a Debian 13.4 slim container image with Cloudflare WARP. The container joins a Docker macvlan network, requests IPv4 DHCP on `eth0`, waits for IPv6 autoconfiguration readiness, and starts `warp-svc`.
+This repository builds a Debian 13.4 slim container image with Cloudflare WARP. The container joins a Docker macvlan network, requests IPv4 DHCP on `eth0`, removes the Docker-injected IPv4 from that interface while restoring the DHCPv4 address and route, waits for IPv6 autoconfiguration readiness, and starts `warp-svc`.
 
 ## Build and publish
 
@@ -31,7 +31,7 @@ docker network create -d macvlan \
   warp_macvlan
 ```
 
-Do not configure the project so that `eth0` receives both a Docker-managed IPv4 and a DHCPv4 lease at the same time. That dual-IPv4 state can make routes such as `10.9.1.3` pick the wrong source address.
+Do not configure the project so that `eth0` keeps both a Docker-managed IPv4 and a DHCPv4 lease at the same time. That dual-IPv4 state can make routes such as `10.9.1.3` pick the wrong source address. The current entrypoint explicitly removes Docker's injected IPv4 after DHCP succeeds and restores the DHCPv4 address and route so that `eth0` ends up with only the DHCP lease.
 
 ## Deploy
 
@@ -51,7 +51,9 @@ docker exec -it warp sh -lc 'ip route get 10.9.1.3'
 docker exec -it warp ip -6 addr show dev eth0
 ```
 
-4. Register and connect WARP for the first time:
+4. Verify that only the DHCPv4 address remains on `eth0`, the campus portal route uses that DHCP source address, and IPv6 is still present. In the confirmed working state, the Docker/macvlan IPv4 has been removed, `ip route get 10.9.1.3` selects the DHCPv4 source, and the portal address is reachable from the container.
+
+5. Register and connect WARP for the first time:
 
 ```bash
 docker exec -it warp warp-cli register
