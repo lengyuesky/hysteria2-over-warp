@@ -14,6 +14,15 @@ cleanup_dhcp_state() {
 
 start_dbus() {
   mkdir -p /run/dbus
+
+  if [ -f /run/dbus/pid ]; then
+    pid="$(cat /run/dbus/pid 2>/dev/null || true)"
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+      return
+    fi
+    rm -f /run/dbus/pid
+  fi
+
   dbus-daemon --system --fork
 }
 
@@ -23,6 +32,18 @@ wait_for_eth0() {
     i=$((i + 1))
     if [ "$i" -ge 20 ]; then
       log "eth0 not found"
+      exit 1
+    fi
+    sleep 1
+  done
+}
+
+wait_for_ipv6_link_local() {
+  i=0
+  while ! ip -6 addr show dev eth0 scope link | grep -q 'inet6 fe80:'; do
+    i=$((i + 1))
+    if [ "$i" -ge 20 ]; then
+      log "ipv6 link-local address not ready on eth0"
       exit 1
     fi
     sleep 1
@@ -53,6 +74,9 @@ main() {
 
   log "requesting ipv4 lease"
   request_ipv4
+
+  log "waiting for ipv6 link-local address"
+  wait_for_ipv6_link_local
 
   log "requesting ipv6 lease"
   request_ipv6
