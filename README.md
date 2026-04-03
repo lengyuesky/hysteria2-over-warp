@@ -13,19 +13,15 @@ Push to `main` to publish the image to GHCR:
 
 ## Host network prerequisites
 
-Docker must have IPv6 enabled, the compose-managed macvlan network must keep `enable_ipv6: true`, and your LAN must provide all of the following on the macvlan-attached segment:
+Your LAN must provide all of the following on the macvlan-attached segment:
 
 - IPv4 DHCP
 - Automatic IPv6 configuration for the container network segment (DHCPv6 or RA/SLAAC)
 - Layer 2 connectivity for a separate container MAC address
 
-The values in `docker-compose.yml` are templates. Replace all of the following before deployment:
+Before `docker compose up`, create an external `warp_macvlan` network on the host. Compose only attaches the container to that network; the container-side IPv4 address must come from `dhclient -4`, not from Docker IPAM. That external network must also preserve IPv6 support for the attached segment, because the current entrypoint still waits for IPv6 link-local readiness and then checks for an IPv6 default route before the optional DHCPv6 request.
 
-- `parent: eth0`
-- `192.168.10.0/24`
-- `192.168.10.1`
-
-Equivalent manual macvlan network creation command:
+Example external macvlan network creation command:
 
 ```bash
 docker network create -d macvlan \
@@ -35,9 +31,11 @@ docker network create -d macvlan \
   warp_macvlan
 ```
 
+Do not configure the project so that `eth0` receives both a Docker-managed IPv4 and a DHCPv4 lease at the same time. That dual-IPv4 state can make routes such as `10.9.1.3` pick the wrong source address.
+
 ## Deploy
 
-1. Update the template network values in `docker-compose.yml`.
+1. Create the external `warp_macvlan` network on the host.
 2. Pull and start the container:
 
 ```bash
@@ -45,10 +43,11 @@ docker compose pull
 docker compose up -d
 ```
 
-3. Verify addressing inside the container, including whether IPv6 was automatically assigned by your network:
+3. Verify addressing inside the container, including whether IPv6 was automatically assigned by your network and whether campus portal routes select the DHCPv4 source address:
 
 ```bash
 docker exec -it warp ip -4 addr show dev eth0
+docker exec -it warp sh -lc 'ip route get 10.9.1.3'
 docker exec -it warp ip -6 addr show dev eth0
 ```
 
@@ -60,4 +59,4 @@ docker exec -it warp warp-cli connect
 docker exec -it warp warp-cli status
 ```
 
-If you use the compose-managed network definition above, do not pre-create an external `warp_macvlan` network with conflicting settings.
+If `eth0` ever shows both a Docker-managed IPv4 and a DHCPv4 lease, fix the network contract first. The container should not keep two competing IPv4 sources on the same interface.

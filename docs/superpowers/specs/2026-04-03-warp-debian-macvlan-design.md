@@ -8,9 +8,9 @@
 - `Dockerfile`
 - 容器启动脚本（entrypoint）
 - `docker-compose.yml`
-  - 由 compose 直接定义 macvlan 网络参数（parent、IPv4/IPv6 subnet、gateway）
+  - 通过 `external` 网络引用宿主机已创建的 `macvlan`
 - GitHub Actions 工作流：自动构建并发布镜像到 GHCR
-- 使用说明：如何通过 compose 内建网络或等价手动命令启动 macvlan 网络并运行容器
+- 使用说明：如何先在宿主机创建外部 `macvlan` 网络，再启动容器
 
 不包含以下内容：
 - systemd 容器化
@@ -24,7 +24,8 @@
 - 网络模式固定为 Docker `macvlan`
 - 容器内必须自行发起 IPv4 DHCP 请求，不由 Compose 静态分配容器 IPv4 地址
 - IPv6 地址由上游网络自动配置提供，可来自 DHCPv6 或 RA/SLAAC
-- Compose 需要显式定义 macvlan 网络模板参数：parent、IPv4 subnet/gateway，并启用 `enable_ipv6: true`
+- Compose 只负责引用外部 `macvlan` 网络，不在仓库内直接定义 `parent`、IPv4 `subnet/gateway` 或 `enable_ipv6`
+- 宿主机侧必须预先创建好供 compose 引用的外部 `warp_macvlan` 网络
 - WARP 仅做安装和服务启动；首次注册与连接由用户手动完成
 - 宿主机、交换网络和上游路由器必须真实支持：
   - macvlan 所在二层网络
@@ -50,8 +51,7 @@
 3. `docker-compose.yml` 负责：
    - 赋予必要能力（如 `NET_ADMIN`）
    - 挂载 `/dev/net/tun`
-   - 直接定义 `macvlan` 网络
-   - 提供可修改的模板化网络参数：`parent: eth0`、IPv4 subnet/gateway
+   - 接入外部 `macvlan` 网络
    - 不设置静态容器 IP
 
 ## 组件设计
@@ -100,35 +100,29 @@
 - 首次 WARP 注册不自动化，避免把设备身份状态写死在镜像或启动脚本里
 
 ### 3. docker-compose.yml
-职责：定义容器运行参数与 macvlan 网络模板。
+职责：定义容器运行参数，并把服务接入宿主机预先创建的外部 `macvlan` 网络。
 
 关键配置：
 - 使用 `image: ghcr.io/lengyuesky/hysteria2-over-warp:latest`
 - 不使用本地 `build:`
 - `cap_add: [NET_ADMIN]`
 - `devices: ["/dev/net/tun:/dev/net/tun"]`
-- 直接在 compose 中定义 `macvlan` 网络，而不是引用 `external` 网络
-- `driver_opts.parent: eth0`
-- `enable_ipv6: true`
-- `ipam.config` 中提供 IPv4 占位模板：
-  - `subnet: 192.168.10.0/24`
-  - `gateway: 192.168.10.1`
+- 引用 `external` 的 `warp_macvlan` 网络
 - `stdin_open` / `tty` 可选，便于首次进入容器执行 `warp-cli`
 - 不写 `ipv4_address` / `ipv6_address`
 
 说明：
 - Compose 本身不会让容器“自动 DHCP”；真正的 IPv4 DHCP 动作由容器内 `dhclient` 完成
-- IPv6 是否出现由上游网络自动配置提供，compose 需要启用 IPv6 能力，但不要求显式声明 IPv6 subnet/gateway
-- Compose 中定义的是宿主侧 macvlan 网络模板参数，不是容器固定地址分配
-- 这些网络参数是模板值，部署前应替换成真实网口、IPv4 网段与网关
-- README 中保留等价的 `docker network create` 命令，便于手动部署或排障
+- `warp_macvlan` 网络应由宿主机提前创建，负责把容器接入目标二层网络
+- 仓库内 compose 不再声明 `driver`、`parent`、`enable_ipv6` 或 `ipam` 参数，避免同时保留 Docker 管理的 IPv4 与容器内 DHCPv4
+- README 中保留宿主机侧 `docker network create` 命令，便于部署或排障
 - Compose 使用 CI 已发布镜像，避免本地构建结果与部署镜像不一致
 
 ## 数据流 / 启动流
 1. 开发者将代码 push 到 `main`
 2. GitHub Actions 构建镜像并推送到 `ghcr.io/lengyuesky/hysteria2-over-warp`
-3. 用户按实际环境调整 compose 中的 `parent`、IPv4 subnet/gateway
-4. Compose 拉取 `:latest` 镜像并创建 macvlan 网络，把容器网卡接入该网络
+3. 用户先在宿主机创建外部 `warp_macvlan` 网络
+4. Compose 拉取 `:latest` 镜像并把容器网卡接入该外部网络
 5. entrypoint 在容器内对 `eth0` 发送 DHCPv4 请求，并等待 IPv6 自动配置就绪
 6. 上游 DHCP 服务器为该 MAC 分配 IPv4 地址，上游网络自动向该网段传播 IPv6 配置
 7. `warp-svc` 启动
@@ -136,12 +130,15 @@
    - `warp-cli register`
    - `warp-cli connect`
 
+若 Compose 同时内联 macvlan IPv4 IPAM，而容器内又执行 `dhclient -4`，同一接口会出现双 IPv4。到校园网登录地址等 IPv4 目标时，内核可能默认选中 Docker IPAM 地址作为 `src`，从而导致访问异常。
+
 ## 失败处理
 - `eth0` 不存在：启动失败并退出
 - `dhclient -4` 失败：启动失败并退出
 - IPv6 自动配置在启动阶段未就绪：启动失败并退出
 - `warp-svc` 启动失败：启动失败并退出
 - `/dev/net/tun` 不可用：WARP 后续连接会失败，应在启动日志中暴露问题
+- 若 `eth0` 同时出现 Docker 管理的 IPv4 和 DHCPv4：视为部署契约错误，应回退到“外部 macvlan + 容器内 DHCPv4”的单一来源模型，而不是在运行时通过脚本修路由或删地址
 
 这样设计的原因是：本项目目标明确，失败应尽早暴露，而不是引入复杂兜底逻辑掩盖网络前提不满足的问题。
 
@@ -149,14 +146,15 @@
 至少验证以下内容：
 1. GitHub Actions 在 `main` push 后成功构建并推送 GHCR 镜像
 2. GHCR 中存在 `latest` 与 `sha-<shortsha>` tag
-3. 用户替换 compose 中的模板网络参数后，`docker compose config` 可成功渲染
+3. `docker-compose.yml` 以 `external: true` / `name: warp_macvlan` 成功通过 `docker compose config` 渲染
 4. Compose 可成功拉取 `ghcr.io/lengyuesky/hysteria2-over-warp:latest`
-5. 容器启动后 `ip -4 addr show dev eth0` 能看到 DHCPv4 地址
-6. 容器启动后 `ip -6 addr show dev eth0` 能看到自动获得的 IPv6 地址
-7. `warp-svc` 进程存在
-8. 手动执行 `warp-cli register` 成功
-9. 手动执行 `warp-cli connect` 成功
-10. `warp-cli status` 返回已连接状态
+5. 容器启动后 `ip -4 addr show dev eth0` 能看到 DHCPv4 地址，且不再并存 Docker IPAM 主地址
+6. `ip route get 10.9.1.3` 的 `src` 指向 DHCPv4 地址
+7. 容器启动后 `ip -6 addr show dev eth0` 能看到自动获得的 IPv6 地址
+8. `warp-svc` 进程存在
+9. 手动执行 `warp-cli register` 成功
+10. 手动执行 `warp-cli connect` 成功
+11. `warp-cli status` 返回已连接状态
 
 ## 已确认决策
 - 交付形式：`Dockerfile + docker-compose.yml + GitHub Actions 工作流`
@@ -166,12 +164,13 @@
 - 镜像仓库：GHCR
 - 发布规则：push 到 `main` 时推送 `latest` 和 `sha-<shortsha>`
 - Compose 镜像引用：`ghcr.io/lengyuesky/hysteria2-over-warp:latest`
-- macvlan 参数写法：在 compose 中直接定义 IPv4 网络模板，并在 README 中保留等价的手动创建命令
+- macvlan 参数写法：compose 仅引用外部 `warp_macvlan`，宿主机侧网络参数通过 `docker network create` 或等价方式预先准备
 
 ## 风险
 1. Docker 官方文档更偏向为 macvlan 网络配置明确子网，而不是在容器中自行 DHCP；本方案属于“可实现但依赖环境”的自定义做法。
 2. 某些网络环境若不向 macvlan 容器传播 RA/SLAAC 或 DHCPv6，容器可能无法自动获得 IPv6。
 3. macvlan 容器默认无法直接与宿主机通信，这不是 WARP 问题，而是 macvlan 特性。
+4. 若部署时再次把 compose 改回内联 `macvlan` + IPv4 IPAM，同时保留容器内 `dhclient -4`，会重新制造双 IPv4，并让校园网登录链路选错源地址。
 
 ## 推荐实现结论
 继续按本设计实施：
