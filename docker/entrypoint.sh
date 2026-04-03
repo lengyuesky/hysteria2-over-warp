@@ -66,9 +66,18 @@ request_ipv4() {
   dhclient -4 -v eth0
 }
 
+get_dhcp_ipv4() {
+  awk '/^lease \{/ { in_lease = 1; next }
+       in_lease && /^  fixed-address / { gsub(/;/, "", $2); addr = $2 }
+       /^}/ { in_lease = 0 }
+       END { if (addr) print addr }' /var/lib/dhcp/dhclient.leases
+}
+
 cleanup_docker_ipv4() {
-  ip -4 -o addr show dev eth0 scope global | awk '/inet / && $0 !~ / dynamic / {print $4}' | while read -r addr; do
-    if [ -n "$addr" ]; then
+  dhcp_ipv4="$1"
+
+  ip -4 -o addr show dev eth0 scope global | awk '/inet / {print $4}' | while read -r addr; do
+    if [ -n "$addr" ] && [ "${addr%/*}" != "$dhcp_ipv4" ]; then
       ip addr del "$addr" dev eth0
     fi
   done
@@ -97,8 +106,14 @@ main() {
   log "requesting ipv4 lease"
   request_ipv4
 
+  dhcp_ipv4="$(get_dhcp_ipv4)"
+  if [ -z "$dhcp_ipv4" ]; then
+    log "failed to determine dhcp ipv4 address"
+    exit 1
+  fi
+
   log "removing docker-provided ipv4 addresses"
-  cleanup_docker_ipv4
+  cleanup_docker_ipv4 "$dhcp_ipv4"
 
   log "waiting for ipv6 autoconfiguration readiness"
   wait_for_ipv6_link_local
