@@ -54,10 +54,6 @@ request_ipv4() {
   dhclient -4 -v eth0
 }
 
-request_ipv6() {
-  dhclient -6 -v eth0
-}
-
 start_warp() {
   warp-svc
 }
@@ -75,11 +71,8 @@ main() {
   log "requesting ipv4 lease"
   request_ipv4
 
-  log "waiting for ipv6 link-local address"
+  log "waiting for ipv6 autoconfiguration readiness"
   wait_for_ipv6_link_local
-
-  log "requesting ipv6 lease"
-  request_ipv6
 
   log "starting warp-svc"
   start_warp &

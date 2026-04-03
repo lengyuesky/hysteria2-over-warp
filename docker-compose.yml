@@ -17,10 +17,7 @@ networks:
     driver: macvlan
     driver_opts:
       parent: eth0
-    enable_ipv6: true
     ipam:
       config:
         - subnet: 192.168.10.0/24
           gateway: 192.168.10.1
-        - subnet: 2001:db8:10::/64
-          gateway: 2001:db8:10::1

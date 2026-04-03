@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository builds a Debian 13.4 slim container image with Cloudflare WARP. The container joins a Docker macvlan network, requests IPv4 DHCP and IPv6 DHCPv6 leases on `eth0`, and starts `warp-svc`.
+This repository builds a Debian 13.4 slim container image with Cloudflare WARP. The container joins a Docker macvlan network, requests IPv4 DHCP on `eth0`, waits for IPv6 autoconfiguration readiness, and starts `warp-svc`.
 
 ## Build and publish
 
@@ -16,7 +16,7 @@ Push to `main` to publish the image to GHCR:
 Docker must have IPv6 enabled, and your LAN must provide all of the following on the macvlan-attached segment:
 
 - IPv4 DHCP
-- IPv6 DHCPv6
+- Automatic IPv6 configuration for the container network segment (DHCPv6 or RA/SLAAC)
 - Layer 2 connectivity for a separate container MAC address
 
 The values in `docker-compose.yml` are templates. Replace all of the following before deployment:
@@ -24,8 +24,6 @@ The values in `docker-compose.yml` are templates. Replace all of the following b
 - `parent: eth0`
 - `192.168.10.0/24`
 - `192.168.10.1`
-- `2001:db8:10::/64`
-- `2001:db8:10::1`
 
 Equivalent manual macvlan network creation command:
 
@@ -33,9 +31,6 @@ Equivalent manual macvlan network creation command:
 docker network create -d macvlan \
   --subnet=192.168.10.0/24 \
   --gateway=192.168.10.1 \
-  --ipv6 \
-  --subnet=2001:db8:10::/64 \
-  --gateway=2001:db8:10::1 \
   -o parent=eth0 \
   warp_macvlan
 ```
@@ -50,7 +45,7 @@ docker compose pull
 docker compose up -d
 ```
 
-3. Verify addressing inside the container:
+3. Verify addressing inside the container, including whether IPv6 was automatically assigned by your network:
 
 ```bash
 docker exec -it warp ip -4 addr show dev eth0
