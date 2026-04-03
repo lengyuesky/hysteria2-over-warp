@@ -24,7 +24,7 @@
 - 网络模式固定为 Docker `macvlan`
 - 容器内必须自行发起 IPv4 DHCP 请求，不由 Compose 静态分配容器 IPv4 地址
 - IPv6 地址由上游网络自动配置提供，可来自 DHCPv6 或 RA/SLAAC
-- Compose 需要显式定义 macvlan 网络模板参数：parent、IPv4 subnet/gateway
+- Compose 需要显式定义 macvlan 网络模板参数：parent、IPv4 subnet/gateway，并启用 `enable_ipv6: true`
 - WARP 仅做安装和服务启动；首次注册与连接由用户手动完成
 - 宿主机、交换网络和上游路由器必须真实支持：
   - macvlan 所在二层网络
@@ -109,6 +109,7 @@
 - `devices: ["/dev/net/tun:/dev/net/tun"]`
 - 直接在 compose 中定义 `macvlan` 网络，而不是引用 `external` 网络
 - `driver_opts.parent: eth0`
+- `enable_ipv6: true`
 - `ipam.config` 中提供 IPv4 占位模板：
   - `subnet: 192.168.10.0/24`
   - `gateway: 192.168.10.1`
@@ -117,7 +118,7 @@
 
 说明：
 - Compose 本身不会让容器“自动 DHCP”；真正的 IPv4 DHCP 动作由容器内 `dhclient` 完成
-- IPv6 是否出现由上游网络自动配置提供，不再要求 compose 显式声明 IPv6 网络模板参数
+- IPv6 是否出现由上游网络自动配置提供，compose 需要启用 IPv6 能力，但不要求显式声明 IPv6 subnet/gateway
 - Compose 中定义的是宿主侧 macvlan 网络模板参数，不是容器固定地址分配
 - 这些网络参数是模板值，部署前应替换成真实网口、IPv4 网段与网关
 - README 中保留等价的 `docker network create` 命令，便于手动部署或排障

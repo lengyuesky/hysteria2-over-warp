@@ -13,7 +13,7 @@ Push to `main` to publish the image to GHCR:
 
 ## Host network prerequisites
 
-Docker must have IPv6 enabled, and your LAN must provide all of the following on the macvlan-attached segment:
+Docker must have IPv6 enabled, the compose-managed macvlan network must keep `enable_ipv6: true`, and your LAN must provide all of the following on the macvlan-attached segment:
 
 - IPv4 DHCP
 - Automatic IPv6 configuration for the container network segment (DHCPv6 or RA/SLAAC)
