@@ -353,9 +353,6 @@ main() {
   log "restoring dhcp ipv4 address and route"
   restore_dhcp_ipv4 "$dhcp_ipv4" "$dhcp_prefix_len" "$dhcp_router"
 
-  log "running optional campus login stage"
-  run_campus_login_script
-
   log "waiting for ipv6 autoconfiguration readiness"
   wait_for_ipv6_link_local
 
@@ -364,6 +361,9 @@ main() {
 
   log "requesting optional dhcpv6 lease"
   request_ipv6
+
+  log "running optional campus login stage"
+  run_campus_login_script
 
   log "starting warp-svc"
   start_warp

@@ -13,6 +13,11 @@ checks = [
     ("entrypoint campus login stage", "run_campus_login_script()" in entrypoint),
     ("entrypoint warp auto connect stage", "auto_connect_warp()" in entrypoint),
     ("entrypoint hysteria start stage", "start_hysteria()" in entrypoint),
+    (
+        "entrypoint dhcpv6 happens before campus login",
+        entrypoint.index('log "requesting optional dhcpv6 lease"')
+        < entrypoint.index('log "running optional campus login stage"'),
+    ),
     ("compose campus login is optional", "CAMPUS_LOGIN_SCRIPT:" not in compose),
     ("compose loads env file", "env_file:" in compose),
     ("compose uses env password", "HY2_PASSWORD: ${HY2_PASSWORD}" in compose),
