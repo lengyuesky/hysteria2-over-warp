@@ -44,26 +44,32 @@ Do not configure the project so that `eth0` keeps both a Docker-managed IPv4 and
 
 The compose file now expects these local paths and settings:
 
-- `./config/scripts/campus-login.sh`: your campus login script
+- `./config/scripts/campus-login.sh`: optional campus login script
 - `./config/hysteria/`: optional custom Hysteria config and certificate directory
-- `HY2_PASSWORD`: required Hysteria 2 password
-- `HY2_SNI`: defaults to `bing.com`
-- `WARP_CONNECT_DELAY`: defaults to `30`
+- `.env`: user-editable runtime parameters
+- `HY2_PASSWORD` in `.env`: required Hysteria 2 password
 
 If `./config/hysteria/config.yaml` exists, the container uses it directly. Otherwise it generates a default server config. If `server.crt` and `server.key` are missing, the container generates a self-signed certificate automatically.
+
+Create your `.env` from the example before startup:
+
+```bash
+cp .env.example .env
+```
 
 ## Deploy
 
 1. Create the external `warp_macvlan` network on the host.
-2. Prepare your campus login script and Hysteria password:
+2. Prepare the Hysteria directory and `.env`:
 
 ```bash
 mkdir -p config/scripts config/hysteria
-chmod +x config/scripts/campus-login.sh
+cp .env.example .env
 ```
 
-3. Set `HY2_PASSWORD` in `docker-compose.yml` to a real strong password.
-4. Pull and start the container:
+3. If you need campus authentication, place an executable script at `config/scripts/campus-login.sh` and then set `CAMPUS_LOGIN_SCRIPT=/config/scripts/campus-login.sh` in `docker-compose.yml`.
+4. Edit `.env` and set `HY2_PASSWORD` to a real strong password.
+5. Pull and start the container:
 
 ```bash
 docker compose pull
@@ -82,7 +88,7 @@ The startup flow is:
 6. wait 30 seconds and auto-connect WARP if already registered
 7. start Hysteria 2
 
-The campus login script is a strong prerequisite. If it is configured but missing, not executable, or exits non-zero, the container fails fast.
+The campus login script is optional. If you configure `CAMPUS_LOGIN_SCRIPT`, it becomes a strong prerequisite: if the script is missing, not executable, or exits non-zero, the container fails fast.
 
 ## First-time WARP registration
 

@@ -7,9 +7,10 @@ services:
       - NET_ADMIN
     devices:
       - /dev/net/tun:/dev/net/tun
+    env_file:
+      - .env
     environment:
-      CAMPUS_LOGIN_SCRIPT: /config/scripts/campus-login.sh
-      HY2_PASSWORD: change-this-password
+      HY2_PASSWORD: ${HY2_PASSWORD}
     volumes:
       - ./config/scripts:/config/scripts:ro
       - ./config/hysteria:/config/hysteria

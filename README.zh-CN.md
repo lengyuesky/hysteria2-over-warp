@@ -44,26 +44,32 @@ docker network create -d macvlan \
 
 当前 compose 约定以下本地路径和变量：
 
-- `./config/scripts/campus-login.sh`：校园网登录脚本
+- `./config/scripts/campus-login.sh`：可选的校园网登录脚本
 - `./config/hysteria/`：可选的 Hysteria 自定义配置和证书目录
-- `HY2_PASSWORD`：必填的 Hysteria 2 认证密码
-- `HY2_SNI`：默认 `bing.com`
-- `WARP_CONNECT_DELAY`：默认 `30`
+- `.env`：用户可编辑的运行参数文件
+- `.env` 里的 `HY2_PASSWORD`：必填的 Hysteria 2 认证密码
 
 如果 `./config/hysteria/config.yaml` 存在，容器会直接使用它；否则自动生成默认的 Hysteria 服务端配置。如果 `server.crt` 和 `server.key` 不存在，容器会自动生成自签证书。
+
+启动前先从示例文件生成 `.env`：
+
+```bash
+cp .env.example .env
+```
 
 ## 部署
 
 1. 在宿主机上创建外部 `warp_macvlan` 网络。
-2. 准备校园网登录脚本和 Hysteria 目录：
+2. 准备 Hysteria 目录和 `.env`：
 
 ```bash
 mkdir -p config/scripts config/hysteria
-chmod +x config/scripts/campus-login.sh
+cp .env.example .env
 ```
 
-3. 在 `docker-compose.yml` 中把 `HY2_PASSWORD` 改成真实强密码。
-4. 拉取并启动容器：
+3. 如果你需要校园网认证，把可执行脚本放到 `config/scripts/campus-login.sh`，然后再在 `docker-compose.yml` 里设置 `CAMPUS_LOGIN_SCRIPT=/config/scripts/campus-login.sh`。
+4. 编辑 `.env`，把 `HY2_PASSWORD` 改成真实强密码。
+5. 拉取并启动容器：
 
 ```bash
 docker compose pull
@@ -82,7 +88,7 @@ docker compose up -d
 6. 等待 30 秒；若已注册则自动连接 WARP
 7. 启动 Hysteria 2
 
-校园网登录脚本是强前置条件：如果配置了脚本但文件不存在、不可执行或返回非零退出码，容器会直接失败退出。
+校园网登录脚本是可选的。只有在你配置了 `CAMPUS_LOGIN_SCRIPT` 之后，它才会变成强前置条件：如果脚本不存在、不可执行或返回非零退出码，容器会直接失败退出。
 
 ## 首次 WARP 注册
 
