@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parent
 entrypoint = (ROOT / "docker" / "entrypoint.sh").read_text()
 compose = (ROOT / "docker-compose.yml").read_text()
 dockerfile = (ROOT / "Dockerfile").read_text()
+dhclient_ipv6_exit_hook = (ROOT / "docker" / "dhclient-ipv6-exit-hook.sh").read_text()
 readme = (ROOT / "README.md").read_text()
 readme_zh = (ROOT / "README.zh-CN.md").read_text()
 spec = (ROOT / "docs" / "superpowers" / "specs" / "2026-04-03-warp-debian-macvlan-design.md").read_text()
@@ -26,6 +27,14 @@ checks = [
     ("compose hysteria port", "8443/udp" in compose),
     ("env example exists", (ROOT / ".env.example").exists()),
     ("dockerfile installs openssl", "openssl" in dockerfile),
+    (
+        "dockerfile copies dhclient ipv6 exit hook",
+        "dhclient-ipv6-exit-hook.sh" in dockerfile,
+    ),
+    (
+        "ipv6 exit hook deletes unexpected default route",
+        'ip -6 route del default via "$gateway" dev "$interface"' in dhclient_ipv6_exit_hook,
+    ),
     ("dockerfile copies hysteria config", "hysteria" in dockerfile.lower()),
     ("readme mentions campus login script", "campus login script" in readme.lower()),
     ("readme mentions auto connect", "30 seconds" in readme.lower()),

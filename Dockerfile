@@ -16,7 +16,7 @@ RUN apt-get update \
         isc-dhcp-client \
         openssl \
         procps \
-    && mkdir -p /var/lib/dhcp /var/lib/hysteria /usr/local/share/hysteria /config/hysteria \
+    && mkdir -p /var/lib/dhcp /var/lib/hysteria /usr/local/share/hysteria /config/hysteria /etc/dhcp/dhclient-exit-hooks.d \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p --mode=0755 /usr/share/keyrings \
@@ -40,7 +40,8 @@ RUN arch="${TARGETARCH:-$(dpkg --print-architecture)}" \
     && chmod +x /usr/local/bin/hysteria
 
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY docker/dhclient-ipv6-exit-hook.sh /etc/dhcp/dhclient-exit-hooks.d/cleanup-ipv6-default-route
 COPY docker/hysteria-server.yaml.template /usr/local/share/hysteria/config.yaml.template
-RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /etc/dhcp/dhclient-exit-hooks.d/cleanup-ipv6-default-route
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
