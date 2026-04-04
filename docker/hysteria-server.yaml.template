@@ -1,0 +1,10 @@
+listen: :${HY2_PORT}
+
+tls:
+  cert: ${HY2_CERT_FILE}
+  key: ${HY2_KEY_FILE}
+  sniGuard: disable
+
+auth:
+  type: password
+  password: ${HY2_PASSWORD}
