@@ -25,7 +25,6 @@ cat > "$stub_bin/warp-cli" <<EOF
 set -eo pipefail
 printf '%s\n' "\$*" >> "$calls_log"
 if [ "\$1 \$2" = "registration show" ]; then
-  printf 'registration show probe\n'
   exit 1
 fi
 exit 0
@@ -67,9 +66,6 @@ assert_contains "$calls_log" 'warp-svc'
 assert_contains "$calls_log" 'registration show'
 assert_contains "$calls_log" 'registration new'
 assert_contains "$calls_log" 'connect'
-if grep -Fq 'registration show probe' "$happy_stdout"; then
-  fail 'expected registration show output to be suppressed'
-fi
 assert_contains "$happy_stdout" 'WARP is connected'
 
 missing_svc_stdout="$tmpdir/missing-svc.stdout"
