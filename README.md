@@ -21,16 +21,15 @@
 
    ```env
    HY2_PASSWORD=replace-with-a-strong-password
-   IMAGE_TAG=latest
    ```
 
-3. 启动服务：
+3. 拉取并启动服务：
 
    ```bash
-   docker compose up --build -d
+   docker compose up -d
    ```
 
-启动命令会读取 `.env` 中的变量，并通过 `docker-compose.yml` 向容器传入 Hysteria 与 WARP 所需配置。
+启动命令会读取 `.env` 中的变量，并通过 `docker-compose.yml` 使用 `ghcr.io/lengyuesky/hysteria2-over-warp:latest` 镜像。
 
 查看日志：
 
@@ -69,17 +68,16 @@ docker compose down
 - `HY2_CERT_PATH` / `HY2_KEY_PATH`：容器内证书路径
 - `WARP_MAX_ATTEMPTS`：WARP 轮询次数
 - `WARP_RETRY_SECONDS`：WARP 轮询间隔秒数
-- `IMAGE_TAG`：compose 使用的镜像标签，默认 `latest`
 
 ## 直接使用 GHCR 镜像
 
 默认镜像地址格式：
 
 ```text
-ghcr.io/lengyuesky/hysteria2-over-warp:<tag>
+ghcr.io/lengyuesky/hysteria2-over-warp:latest
 ```
 
-如果不需要本地构建，可以把 `docker-compose.yml` 中的 `build` 段删除，保留 `image` 后直接拉取并启动。
+当前 `docker-compose.yml` 已默认直接使用 GHCR 镜像，不会在本地重新构建。
 
 ## GitHub Actions
 

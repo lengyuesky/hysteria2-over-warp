@@ -1,8 +1,6 @@
 services:
   proxy:
-    build:
-      context: .
-    image: ghcr.io/lengyuesky/hysteria2-over-warp:${IMAGE_TAG}
+    image: ghcr.io/lengyuesky/hysteria2-over-warp:latest
     cap_add:
       - NET_ADMIN
     devices:
