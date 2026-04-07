@@ -1,0 +1,28 @@
+services:
+  proxy:
+    build:
+      context: .
+    image: ghcr.io/${GHCR_NAMESPACE}/hysteria2-over-warp:${IMAGE_TAG}
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      HY2_LISTEN: ${HY2_LISTEN}
+      HY2_PASSWORD: ${HY2_PASSWORD}
+      HY2_DOMAIN: ${HY2_DOMAIN}
+      HY2_CERT_PATH: ${HY2_CERT_PATH}
+      HY2_KEY_PATH: ${HY2_KEY_PATH}
+      HY2_CONFIG_PATH: /etc/hysteria/config.yaml
+      CERT_DIR: /var/lib/hysteria/certs
+      WARP_MAX_ATTEMPTS: ${WARP_MAX_ATTEMPTS}
+      WARP_RETRY_SECONDS: ${WARP_RETRY_SECONDS}
+    ports:
+      - "${HY2_PORT}:443/udp"
+    volumes:
+      - hysteria-runtime:/var/lib/hysteria
+      - ./certs:/certs:ro
+    restart: unless-stopped
+
+volumes:
+  hysteria-runtime:
