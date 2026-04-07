@@ -74,6 +74,30 @@ assert_contains "$calls_log" 'bootstrap'
 assert_contains "$calls_log" "render $app_root/config/hysteria.yaml.template $config_path"
 assert_contains "$calls_log" "hysteria server -c $config_path"
 
+empty_external_cert="$output_dir/external/server.crt"
+empty_external_key="$output_dir/external/server.key"
+regenerated_cert_dir="$output_dir/regenerated-certs"
+empty_config_path="$output_dir/empty-config.yaml"
+empty_stdout="$output_dir/empty.stdout"
+empty_stderr="$output_dir/empty.stderr"
+
+mkdir -p "$(dirname "$empty_external_cert")" "$regenerated_cert_dir"
+: > "$empty_external_cert"
+: > "$empty_external_key"
+: > "$calls_log"
+
+APP_ROOT="$app_root" \
+PATH="$stub_bin:$PATH" \
+HY2_PASSWORD="test-password" \
+HY2_DOMAIN="example.test" \
+CERT_DIR="$regenerated_cert_dir" \
+HY2_CERT_PATH="$empty_external_cert" \
+HY2_KEY_PATH="$empty_external_key" \
+HY2_CONFIG_PATH="$empty_config_path" \
+bash "$ROOT/entrypoint.sh" >"$empty_stdout" 2>"$empty_stderr"
+
+assert_contains "$calls_log" "generate $regenerated_cert_dir example.test"
+
 missing_stdout="$output_dir/missing.stdout"
 missing_stderr="$output_dir/missing.stderr"
 if APP_ROOT="$app_root" \
