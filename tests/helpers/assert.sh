@@ -2,22 +2,14 @@
 set -euo pipefail
 
 fail() {
-  local message="$1"
-  printf 'ASSERTION FAILED: %s\n' "$message" >&2
+  echo "FAIL: $*" >&2
   exit 1
 }
 
 assert_file_exists() {
-  local path="$1"
-  [[ -e "$path" ]] || fail "expected file to exist: $path"
+  [ -f "$1" ] || fail "expected file $1 to exist"
 }
 
 assert_contains() {
-  local target="$1"
-  local expected="$2"
-
-  assert_file_exists "$target"
-  if ! grep -Fq -- "$expected" "$target"; then
-    fail "expected $target to contain: $expected"
-  fi
+  grep -Fq "$2" "$1" || fail "expected '$2' in $1"
 }

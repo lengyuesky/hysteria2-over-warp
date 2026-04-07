@@ -1,7 +1,9 @@
-listen: "${HY2_LISTEN}"
+listen: "__HY2_LISTEN__"
+
 tls:
-  cert: "${HY2_CERT_PATH}"
-  key: "${HY2_KEY_PATH}"
+  cert: "__HY2_CERT_PATH__"
+  key: "__HY2_KEY_PATH__"
+
 auth:
   type: password
-  password: "${HY2_PASSWORD}"
+  password: "__HY2_PASSWORD__"
