@@ -11,5 +11,6 @@ assert_contains "$workflow" "pull_request:"
 assert_contains "$workflow" "docker/login-action@v3"
 assert_contains "$workflow" "docker/build-push-action@v6"
 assert_contains "$workflow" "ghcr.io/"
+assert_contains "$workflow" "platforms: linux/amd64,linux/arm64"
 
 echo "PASS test-workflow"
