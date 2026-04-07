@@ -1,11 +1,7 @@
-listen: ${HY2_LISTEN}
+listen: "${HY2_LISTEN}"
+tls:
+  cert: "${HY2_CERT_PATH}"
+  key: "${HY2_KEY_PATH}"
 auth:
   type: password
-  password: ${HY2_PASSWORD}
-tls:
-  cert: ${HY2_CERT_PATH}
-  key: ${HY2_KEY_PATH}
-quic:
-  initStreamReceiveWindow: 8388608
-log:
-  level: ${HY2_LOG_LEVEL}
+  password: "${HY2_PASSWORD}"

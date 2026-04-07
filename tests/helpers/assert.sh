@@ -12,21 +12,12 @@ assert_file_exists() {
   [[ -e "$path" ]] || fail "expected file to exist: $path"
 }
 
-assert_file_contains() {
-  local path="$1"
+assert_contains() {
+  local target="$1"
   local expected="$2"
 
-  assert_file_exists "$path"
-  if ! grep -Fq "$expected" "$path"; then
-    fail "expected file $path to contain: $expected"
-  fi
-}
-
-assert_equals() {
-  local expected="$1"
-  local actual="$2"
-
-  if [[ "$expected" != "$actual" ]]; then
-    fail "expected [$expected] but got [$actual]"
+  assert_file_exists "$target"
+  if ! grep -Fq -- "$expected" "$target"; then
+    fail "expected $target to contain: $expected"
   fi
 }

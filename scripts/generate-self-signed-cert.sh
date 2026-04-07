@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CERT_PATH="${1:?certificate path is required}"
-KEY_PATH="${2:?key path is required}"
-DOMAIN="${3:-localhost}"
+CERT_DIR="${1:?certificate directory is required}"
+DOMAIN="${2:?domain is required}"
+CERT_PATH="$CERT_DIR/server.crt"
+KEY_PATH="$CERT_DIR/server.key"
 
-mkdir -p "$(dirname "$CERT_PATH")" "$(dirname "$KEY_PATH")"
+if [[ -f "$CERT_PATH" && -f "$KEY_PATH" ]]; then
+  exit 0
+fi
+
+mkdir -p "$CERT_DIR"
 
 openssl req \
   -x509 \
@@ -13,6 +18,8 @@ openssl req \
   -newkey rsa:2048 \
   -keyout "$KEY_PATH" \
   -out "$CERT_PATH" \
-  -days 365 \
-  -subj "/CN=$DOMAIN" \
-  -addext "subjectAltName=DNS:$DOMAIN"
+  -days 3650 \
+  -subj "/CN=$DOMAIN"
+
+chmod 600 "$KEY_PATH"
+chmod 644 "$CERT_PATH"
