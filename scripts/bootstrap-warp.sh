@@ -62,7 +62,10 @@ if [ "$attempt" -gt "$max_attempts" ]; then
 fi
 
 if ! warp-cli registration show >/dev/null 2>&1; then
-  warp-cli --accept-tos registration new
+  if ! warp-cli --accept-tos registration new; then
+    warp-cli registration delete >/dev/null 2>&1 || true
+    warp-cli --accept-tos registration new
+  fi
 fi
 
 warp-cli connect

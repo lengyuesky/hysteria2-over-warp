@@ -203,4 +203,55 @@ assert_contains "$delayed_stdout" 'WARP is connected'
 assert_contains "$calls_log" '--accept-tos registration new'
 assert_contains "$calls_log" 'connect'
 
+conflict_bin="$tmpdir/conflict-bin"
+conflict_state="$tmpdir/conflict-state"
+mkdir -p "$conflict_bin"
+cp "$stub_bin/mkdir" "$conflict_bin/mkdir"
+cp "$stub_bin/curl" "$conflict_bin/curl"
+cp "$stub_bin/sleep" "$conflict_bin/sleep"
+cp "$stub_bin/warp-svc" "$conflict_bin/warp-svc"
+cat > "$conflict_bin/warp-cli" <<EOF
+#!/usr/bin/env bash
+set -eo pipefail
+printf '%s\n' "\$*" >> "$calls_log"
+state_file="$conflict_state"
+state="first"
+if [ -f "\$state_file" ]; then
+  state="\$(<"\$state_file")"
+fi
+if [ "\$1 \$2" = "registration show" ]; then
+  exit 1
+fi
+if [ "\$1 \$2 \$3" = "--accept-tos registration new" ]; then
+  if [ "\$state" = "first" ]; then
+    printf '%s' 'after-first-new' > "\$state_file"
+    printf 'Error: Old registration is still around. Try running: "warp-cli registration delete"\n' >&2
+    exit 1
+  fi
+  exit 0
+fi
+if [ "\$1 \$2" = "registration delete" ]; then
+  printf '%s' 'after-delete' > "\$state_file"
+  exit 0
+fi
+exit 0
+EOF
+chmod +x "$conflict_bin/warp-cli"
+
+conflict_stdout="$tmpdir/conflict.stdout"
+conflict_stderr="$tmpdir/conflict.stderr"
+PATH="$conflict_bin:$PATH" \
+WARP_TRACE_URL="https://example.test/trace" \
+WARP_RUNTIME_DIR="$warp_runtime_dir" \
+WARP_STATE_DIR="$warp_state_dir" \
+WARP_LOG_DIR="$warp_log_dir" \
+WARP_SOCKET_PATH="$warp_socket_path" \
+WARP_MAX_ATTEMPTS=5 \
+WARP_RETRY_SECONDS=0 \
+bash "$ROOT/scripts/bootstrap-warp.sh" >"$conflict_stdout" 2>"$conflict_stderr"
+
+assert_contains "$calls_log" 'registration delete'
+assert_contains "$calls_log" '--accept-tos registration new'
+assert_contains "$conflict_stdout" 'WARP is connected'
+
 echo "PASS test-bootstrap-warp"
