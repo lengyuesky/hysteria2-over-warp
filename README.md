@@ -30,7 +30,7 @@
    docker compose up --build -d
    ```
 
-`docker-compose.yml` 会加载 `.env`，并向容器传入 Hysteria 与 WARP 所需配置。
+启动命令会读取 `.env` 中的变量，并通过 `docker-compose.yml` 向容器传入 Hysteria 与 WARP 所需配置。
 
 查看日志：
 
