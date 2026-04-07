@@ -10,7 +10,7 @@ trap 'rm -rf "$tmpdir"' EXIT
 app_root="$tmpdir/app"
 stub_bin="$tmpdir/bin"
 output_dir="$tmpdir/output"
-calls_log="$output_dir/calls.log"
+calls_log="$tmpdir/calls.log"
 cert_dir="$output_dir/certs"
 config_path="$output_dir/config/config.yaml"
 
@@ -68,6 +68,7 @@ bash "$ROOT/entrypoint.sh" >"$happy_stdout" 2>"$happy_stderr"
 assert_file_exists "$cert_dir/server.crt"
 assert_file_exists "$cert_dir/server.key"
 assert_file_exists "$config_path"
+assert_file_exists "$calls_log"
 assert_contains "$calls_log" "generate $cert_dir example.test"
 assert_contains "$calls_log" 'bootstrap'
 assert_contains "$calls_log" "render $app_root/config/hysteria.yaml.template $config_path"
@@ -83,5 +84,33 @@ if APP_ROOT="$app_root" \
   fail 'expected entrypoint to fail when HY2_PASSWORD is missing'
 fi
 assert_contains "$missing_stderr" 'HY2_PASSWORD is required'
+
+: > "$calls_log"
+external_cert_dir="$tmpdir/external-certs"
+fallback_cert_dir="$tmpdir/fallback-certs"
+external_config_path="$output_dir/config/external-config.yaml"
+mkdir -p "$external_cert_dir"
+: > "$external_cert_dir/server.crt"
+: > "$external_cert_dir/server.key"
+
+existing_stdout="$output_dir/existing.stdout"
+existing_stderr="$output_dir/existing.stderr"
+APP_ROOT="$app_root" \
+PATH="$stub_bin:$PATH" \
+HY2_PASSWORD="test-password" \
+HY2_DOMAIN="example.test" \
+CERT_DIR="$fallback_cert_dir" \
+HY2_CERT_PATH="$external_cert_dir/server.crt" \
+HY2_KEY_PATH="$external_cert_dir/server.key" \
+HY2_CONFIG_PATH="$external_config_path" \
+bash "$ROOT/entrypoint.sh" >"$existing_stdout" 2>"$existing_stderr"
+
+assert_file_exists "$calls_log"
+if grep -Fq 'generate ' "$calls_log"; then
+  fail 'expected entrypoint to use existing certificate paths without generating self-signed certs'
+fi
+assert_contains "$calls_log" 'bootstrap'
+assert_contains "$calls_log" "render $app_root/config/hysteria.yaml.template $external_config_path"
+assert_contains "$calls_log" "hysteria server -c $external_config_path"
 
 echo "PASS test-entrypoint"

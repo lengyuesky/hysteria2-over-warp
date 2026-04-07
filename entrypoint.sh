@@ -15,7 +15,7 @@ HY2_KEY_PATH="${HY2_KEY_PATH:-$CERT_DIR/server.key}"
 
 mkdir -p "$CERT_DIR" "$(dirname "$HY2_CONFIG_PATH")"
 
-if [ ! -s "$HY2_CERT_PATH" ] || [ ! -s "$HY2_KEY_PATH" ]; then
+if [ ! -f "$HY2_CERT_PATH" ] || [ ! -f "$HY2_KEY_PATH" ]; then
   bash "$SCRIPT_DIR/generate-self-signed-cert.sh" "$CERT_DIR" "$HY2_DOMAIN"
   HY2_CERT_PATH="$CERT_DIR/server.crt"
   HY2_KEY_PATH="$CERT_DIR/server.key"
