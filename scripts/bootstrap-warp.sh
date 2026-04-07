@@ -26,6 +26,21 @@ cleanup() {
 
 trap cleanup EXIT
 
+attempt=1
+while [ "$attempt" -le "$max_attempts" ]; do
+  if warp-cli status >/dev/null 2>&1; then
+    break
+  fi
+
+  sleep "$retry_seconds"
+  attempt=$((attempt + 1))
+done
+
+if [ "$attempt" -gt "$max_attempts" ]; then
+  echo "WARP daemon failed to start after $max_attempts attempts" >&2
+  exit 1
+fi
+
 if ! warp-cli registration show >/dev/null 2>&1; then
   warp-cli registration new
 fi

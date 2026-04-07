@@ -111,4 +111,46 @@ if PATH="$fail_bin:$PATH" \
 fi
 assert_contains "$fail_stderr" 'WARP failed to connect after 2 attempts'
 
+delayed_bin="$tmpdir/delayed-bin"
+delayed_cli_attempts="$tmpdir/delayed-cli-attempts"
+mkdir -p "$delayed_bin"
+cp "$stub_bin/warp-svc" "$delayed_bin/warp-svc"
+cp "$stub_bin/curl" "$delayed_bin/curl"
+cp "$stub_bin/sleep" "$delayed_bin/sleep"
+cat > "$delayed_bin/warp-cli" <<EOF
+#!/usr/bin/env bash
+set -eo pipefail
+printf '%s\n' "\$*" >> "$calls_log"
+attempt=0
+if [ -f "$delayed_cli_attempts" ]; then
+  attempt="\$(<"$delayed_cli_attempts")"
+fi
+attempt=\$((attempt + 1))
+printf '%s' "\$attempt" > "$delayed_cli_attempts"
+if [ "\$attempt" -le 2 ]; then
+  printf 'Unable to connect to the CloudflareWARP daemon: No such file or directory (os error 2)\n\nMaybe the daemon is not running?\n' >&2
+  exit 1
+fi
+if [ "\$1 \$2" = "registration show" ]; then
+  exit 1
+fi
+exit 0
+EOF
+chmod +x "$delayed_bin/warp-cli"
+
+delayed_stdout="$tmpdir/delayed.stdout"
+delayed_stderr="$tmpdir/delayed.stderr"
+PATH="$delayed_bin:$PATH" \
+WARP_TRACE_URL="https://example.test/trace" \
+WARP_MAX_ATTEMPTS=5 \
+WARP_RETRY_SECONDS=0 \
+bash "$ROOT/scripts/bootstrap-warp.sh" >"$delayed_stdout" 2>"$delayed_stderr"
+
+if [ "$(<"$delayed_cli_attempts")" -le 2 ]; then
+  fail 'expected bootstrap-warp to retry until warp-cli can reach the daemon'
+fi
+assert_contains "$delayed_stdout" 'WARP is connected'
+assert_contains "$calls_log" 'registration new'
+assert_contains "$calls_log" 'connect'
+
 echo "PASS test-bootstrap-warp"
