@@ -144,14 +144,25 @@ fail_bin="$tmpdir/fail-bin"
 mkdir -p "$fail_bin"
 cp "$stub_bin/mkdir" "$fail_bin/mkdir"
 cp "$stub_bin/warp-svc" "$fail_bin/warp-svc"
-cp "$stub_bin/warp-cli" "$fail_bin/warp-cli"
 cp "$stub_bin/sleep" "$fail_bin/sleep"
+cat > "$fail_bin/warp-cli" <<EOF
+#!/usr/bin/env bash
+set -eo pipefail
+printf '%s\n' "\$*" >> "$calls_log"
+if [ "\$1 \$2" = "registration show" ]; then
+  exit 1
+fi
+if [ "\$1 \$2" = "registration delete" ]; then
+  exit 0
+fi
+exit 0
+EOF
 cat > "$fail_bin/curl" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 printf 'warp=off\n'
 EOF
-chmod +x "$fail_bin/curl"
+chmod +x "$fail_bin/warp-cli" "$fail_bin/curl"
 
 fail_stdout="$tmpdir/fail.stdout"
 fail_stderr="$tmpdir/fail.stderr"
