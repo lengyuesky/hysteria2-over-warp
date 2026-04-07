@@ -21,8 +21,7 @@
 
    ```env
    HY2_PASSWORD=replace-with-a-strong-password
-   GHCR_NAMESPACE=<your-github-name>
-   IMAGE_TAG=dev
+   IMAGE_TAG=latest
    ```
 
 3. 启动服务：
@@ -70,15 +69,14 @@ docker compose down
 - `HY2_CERT_PATH` / `HY2_KEY_PATH`：容器内证书路径
 - `WARP_MAX_ATTEMPTS`：WARP 轮询次数
 - `WARP_RETRY_SECONDS`：WARP 轮询间隔秒数
-- `GHCR_NAMESPACE`：compose 默认镜像命名空间
-- `IMAGE_TAG`：compose 使用的镜像标签
+- `IMAGE_TAG`：compose 使用的镜像标签，默认 `latest`
 
 ## 直接使用 GHCR 镜像
 
 默认镜像地址格式：
 
 ```text
-ghcr.io/<owner>/hysteria2-over-warp:<tag>
+ghcr.io/lengyuesky/hysteria2-over-warp:<tag>
 ```
 
 如果不需要本地构建，可以把 `docker-compose.yml` 中的 `build` 段删除，保留 `image` 后直接拉取并启动。
