@@ -15,7 +15,13 @@ command -v warp-cli >/dev/null 2>&1 || {
   exit 1
 }
 
-mkdir -p /run/cloudflare-warp /var/lib/cloudflare-warp /var/log/cloudflare-warp
+runtime_dir="${WARP_RUNTIME_DIR:-/run/cloudflare-warp}"
+state_dir="${WARP_STATE_DIR:-/var/lib/cloudflare-warp}"
+log_dir="${WARP_LOG_DIR:-/var/log/cloudflare-warp}"
+warp_socket_path="${WARP_SOCKET_PATH:-$runtime_dir/warp_service}"
+
+mkdir -p "$runtime_dir" "$state_dir" "$log_dir"
+rm -f "$warp_socket_path"
 
 warp_log_path="/tmp/warp-svc.log"
 warp-svc >"$warp_log_path" 2>&1 &
@@ -39,7 +45,7 @@ while [ "$attempt" -le "$max_attempts" ]; do
     exit 1
   fi
 
-  if warp-cli status >/dev/null 2>&1; then
+  if [ -S "$warp_socket_path" ] || [ -e "$warp_socket_path" ]; then
     break
   fi
 
