@@ -15,7 +15,10 @@ command -v warp-cli >/dev/null 2>&1 || {
   exit 1
 }
 
-warp-svc >/tmp/warp-svc.log 2>&1 &
+mkdir -p /run/cloudflare-warp /var/lib/cloudflare-warp /var/log/cloudflare-warp
+
+warp_log_path="/tmp/warp-svc.log"
+warp-svc >"$warp_log_path" 2>&1 &
 svc_pid=$!
 
 cleanup() {
@@ -28,6 +31,14 @@ trap cleanup EXIT
 
 attempt=1
 while [ "$attempt" -le "$max_attempts" ]; do
+  if ! kill -0 "$svc_pid" 2>/dev/null; then
+    echo "WARP daemon exited before becoming ready" >&2
+    if [ -f "$warp_log_path" ]; then
+      cat "$warp_log_path" >&2
+    fi
+    exit 1
+  fi
+
   if warp-cli status >/dev/null 2>&1; then
     break
   fi
@@ -38,6 +49,9 @@ done
 
 if [ "$attempt" -gt "$max_attempts" ]; then
   echo "WARP daemon failed to start after $max_attempts attempts" >&2
+  if [ -f "$warp_log_path" ]; then
+    cat "$warp_log_path" >&2
+  fi
   exit 1
 fi
 
