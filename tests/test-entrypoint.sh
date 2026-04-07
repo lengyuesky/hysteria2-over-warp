@@ -74,7 +74,7 @@ assert_contains "$calls_log" 'bootstrap'
 assert_contains "$calls_log" "render $app_root/config/hysteria.yaml.template $config_path"
 assert_contains "$calls_log" "hysteria server -c $config_path"
 assert_contains "$happy_stdout" 'HY2 share link:'
-assert_contains "$happy_stdout" 'hy2://test-password@example.test:443/?sni=example.test&insecure=1'
+assert_contains "$happy_stdout" 'hy2://test-password@example.test:443/?sni=bing.com&insecure=1'
 
 empty_external_cert="$output_dir/external/server.crt"
 empty_external_key="$output_dir/external/server.key"
@@ -99,7 +99,7 @@ HY2_CONFIG_PATH="$empty_config_path" \
 bash "$ROOT/entrypoint.sh" >"$empty_stdout" 2>"$empty_stderr"
 
 assert_contains "$calls_log" "generate $regenerated_cert_dir example.test"
-assert_contains "$empty_stdout" 'hy2://test-password@example.test:443/?sni=example.test&insecure=1'
+assert_contains "$empty_stdout" 'hy2://test-password@example.test:443/?sni=bing.com&insecure=1'
 
 missing_stdout="$output_dir/missing.stdout"
 missing_stderr="$output_dir/missing.stderr"

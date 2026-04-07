@@ -11,7 +11,11 @@ HY2_DOMAIN="${HY2_DOMAIN:-localhost}"
 HY2_PORT="${HY2_PORT:-443}"
 HY2_CERT_PATH="${HY2_CERT_PATH:-$CERT_DIR/server.crt}"
 HY2_KEY_PATH="${HY2_KEY_PATH:-$CERT_DIR/server.key}"
+HY2_SHARE_SNI="${HY2_SHARE_SNI:-bing.com}"
 use_insecure_share_link=0
+
+# 固定分享参数：SNI 使用 bing.com，客户端跳过证书验证
+use_insecure_share_link=1
 
 : "${HY2_PASSWORD:?HY2_PASSWORD is required}"
 
@@ -29,7 +33,7 @@ export HY2_LISTEN HY2_PASSWORD HY2_CERT_PATH HY2_KEY_PATH
 bash "$SCRIPT_DIR/bootstrap-warp.sh"
 bash "$SCRIPT_DIR/render-hysteria-config.sh" "$TEMPLATE_PATH" "$HY2_CONFIG_PATH"
 
-share_link="hy2://${HY2_PASSWORD}@${HY2_DOMAIN}:${HY2_PORT}/?sni=${HY2_DOMAIN}"
+share_link="hy2://${HY2_PASSWORD}@${HY2_DOMAIN}:${HY2_PORT}/?sni=${HY2_SHARE_SNI}"
 if [ "$use_insecure_share_link" -eq 1 ]; then
   share_link="${share_link}&insecure=1"
 fi

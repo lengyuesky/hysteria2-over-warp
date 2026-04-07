@@ -17,5 +17,8 @@ assert_contains "$output" "published: \"443\""
 assert_contains "$output" "target: 443"
 assert_contains "$output" "protocol: udp"
 assert_contains "$output" "/var/lib/hysteria"
+assert_contains "$output" "enable_ipv6: true"
+assert_contains "$output" "172.31.0.0/24"
+assert_contains "$output" "fd00:172:31::/64"
 
 echo "PASS test-compose-config"

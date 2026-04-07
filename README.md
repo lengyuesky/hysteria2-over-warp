@@ -29,7 +29,7 @@
    docker compose up -d
    ```
 
-启动命令会读取 `.env` 中的变量，并通过 `docker-compose.yml` 使用 `ghcr.io/lengyuesky/hysteria2-over-warp:latest` 镜像。
+启动命令会读取 `.env` 中的变量，并通过 `docker-compose.yml` 使用 `ghcr.io/lengyuesky/hysteria2-over-warp:latest` 镜像。compose 默认创建启用 IPv4/IPv6 的双栈 bridge 网络。
 
 查看日志：
 

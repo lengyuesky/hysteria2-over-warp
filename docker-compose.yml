@@ -20,7 +20,18 @@ services:
     volumes:
       - hysteria-runtime:/var/lib/hysteria
       - ./certs:/certs:ro
+    networks:
+      - hysteria-dualstack
     restart: unless-stopped
 
 volumes:
   hysteria-runtime:
+
+networks:
+  hysteria-dualstack:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
+        - subnet: fd00:172:31::/64
