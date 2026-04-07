@@ -13,7 +13,9 @@ docker compose --env-file "$ROOT/.env.example" -f "$ROOT/docker-compose.yml" con
 assert_contains "$output" "NET_ADMIN"
 assert_contains "$output" "devices:"
 assert_contains "$output" "/dev/net/tun"
-assert_contains "$output" "443/udp"
+assert_contains "$output" "published: \"443\""
+assert_contains "$output" "target: 443"
+assert_contains "$output" "protocol: udp"
 assert_contains "$output" "/var/lib/hysteria"
 
 echo "PASS test-compose-config"
