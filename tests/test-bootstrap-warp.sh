@@ -32,7 +32,7 @@ cat > "$stub_bin/warp-cli" <<EOF
 #!/usr/bin/env bash
 set -eo pipefail
 printf '%s\n' "\$*" >> "$calls_log"
-if [ "\$1 \$2" = "registration show" ]; then
+if [ "\$1 \$2 \$3" = "--accept-tos registration show" ]; then
   exit 1
 fi
 exit 0
@@ -83,9 +83,18 @@ bash "$ROOT/scripts/bootstrap-warp.sh" >"$happy_stdout" 2>"$happy_stderr"
 assert_file_exists "$calls_log"
 assert_contains "$calls_log" "mkdir -p $warp_runtime_dir $warp_state_dir $warp_log_dir"
 assert_contains "$calls_log" 'warp-svc'
-assert_contains "$calls_log" 'registration show'
+assert_contains "$calls_log" '--accept-tos registration show'
 assert_contains "$calls_log" '--accept-tos registration new'
-assert_contains "$calls_log" 'connect'
+assert_contains "$calls_log" '--accept-tos connect'
+assert_contains "$happy_stdout" 'WARP is connected'
+
+if grep -Fq -- 'registration show' "$calls_log" && ! grep -Fq -- '--accept-tos registration show' "$calls_log"; then
+  fail 'expected registration show to use --accept-tos'
+fi
+if grep -Fq -- 'connect' "$calls_log" && ! grep -Fq -- '--accept-tos connect' "$calls_log"; then
+  fail 'expected connect to use --accept-tos'
+fi
+
 assert_contains "$happy_stdout" 'WARP is connected'
 
 crash_bin="$tmpdir/crash-bin"
@@ -149,10 +158,10 @@ cat > "$fail_bin/warp-cli" <<EOF
 #!/usr/bin/env bash
 set -eo pipefail
 printf '%s\n' "\$*" >> "$calls_log"
-if [ "\$1 \$2" = "registration show" ]; then
+if [ "\$1 \$2 \$3" = "--accept-tos registration show" ]; then
   exit 1
 fi
-if [ "\$1 \$2" = "registration delete" ]; then
+if [ "\$1 \$2 \$3" = "--accept-tos registration delete" ]; then
   exit 0
 fi
 exit 0
@@ -212,7 +221,7 @@ bash "$ROOT/scripts/bootstrap-warp.sh" >"$delayed_stdout" 2>"$delayed_stderr"
 
 assert_contains "$delayed_stdout" 'WARP is connected'
 assert_contains "$calls_log" '--accept-tos registration new'
-assert_contains "$calls_log" 'connect'
+assert_contains "$calls_log" '--accept-tos connect'
 
 conflict_bin="$tmpdir/conflict-bin"
 conflict_state="$tmpdir/conflict-state"
@@ -230,7 +239,7 @@ state="first"
 if [ -f "\$state_file" ]; then
   state="\$(<"\$state_file")"
 fi
-if [ "\$1 \$2" = "registration show" ]; then
+if [ "\$1 \$2 \$3" = "--accept-tos registration show" ]; then
   exit 1
 fi
 if [ "\$1 \$2 \$3" = "--accept-tos registration new" ]; then
@@ -241,7 +250,7 @@ if [ "\$1 \$2 \$3" = "--accept-tos registration new" ]; then
   fi
   exit 0
 fi
-if [ "\$1 \$2" = "registration delete" ]; then
+if [ "\$1 \$2 \$3" = "--accept-tos registration delete" ]; then
   printf '%s' 'after-delete' > "\$state_file"
   exit 0
 fi
@@ -261,8 +270,9 @@ WARP_MAX_ATTEMPTS=5 \
 WARP_RETRY_SECONDS=0 \
 bash "$ROOT/scripts/bootstrap-warp.sh" >"$conflict_stdout" 2>"$conflict_stderr"
 
-assert_contains "$calls_log" 'registration delete'
+assert_contains "$calls_log" '--accept-tos registration delete'
 assert_contains "$calls_log" '--accept-tos registration new'
+assert_contains "$calls_log" '--accept-tos connect'
 assert_contains "$conflict_stdout" 'WARP is connected'
 
 echo "PASS test-bootstrap-warp"
