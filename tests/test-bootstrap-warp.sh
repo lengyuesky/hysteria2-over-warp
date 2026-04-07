@@ -75,7 +75,7 @@ assert_contains "$calls_log" 'mkdir -p /run/cloudflare-warp /var/lib/cloudflare-
 assert_contains "$calls_log" 'warp-svc'
 assert_contains "$calls_log" 'status'
 assert_contains "$calls_log" 'registration show'
-assert_contains "$calls_log" 'registration new'
+assert_contains "$calls_log" '--accept-tos registration new'
 assert_contains "$calls_log" 'connect'
 assert_contains "$happy_stdout" 'WARP is connected'
 
@@ -192,7 +192,7 @@ if [ "$(<"$delayed_cli_attempts")" -le 2 ]; then
   fail 'expected bootstrap-warp to retry until warp-cli can reach the daemon'
 fi
 assert_contains "$delayed_stdout" 'WARP is connected'
-assert_contains "$calls_log" 'registration new'
+assert_contains "$calls_log" '--accept-tos registration new'
 assert_contains "$calls_log" 'connect'
 
 echo "PASS test-bootstrap-warp"

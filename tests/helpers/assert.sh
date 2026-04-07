@@ -11,5 +11,5 @@ assert_file_exists() {
 }
 
 assert_contains() {
-  grep -Fq "$2" "$1" || fail "expected '$2' in $1"
+  grep -Fq -- "$2" "$1" || fail "expected '$2' in $1"
 }
