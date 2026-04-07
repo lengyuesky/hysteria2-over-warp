@@ -9,37 +9,38 @@ trap 'rm -rf "$tmpdir"' EXIT
 
 stub_bin="$tmpdir/bin"
 calls_log="$tmpdir/calls.log"
-curl_count_file="$tmpdir/curl-count"
+curl_count_file="$tmpdir/curl.count"
 
 mkdir -p "$stub_bin"
 
-cat > "$stub_bin/warp-svc" <<'EOF'
+cat > "$stub_bin/warp-svc" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-printf 'warp-svc\n' >> "$CALLS_LOG"
+printf 'warp-svc\n' >> "$calls_log"
 sleep 30
 EOF
 
-cat > "$stub_bin/warp-cli" <<'EOF'
+cat > "$stub_bin/warp-cli" <<EOF
 #!/usr/bin/env bash
-set -euo pipefail
-printf '%s\n' "$*" >> "$CALLS_LOG"
-if [ "$*" = "registration show" ]; then
+set -eo pipefail
+printf '%s\n' "\$*" >> "$calls_log"
+if [ "\$1 \$2" = "registration show" ]; then
+  printf 'registration show probe\n'
   exit 1
 fi
 exit 0
 EOF
 
-cat > "$stub_bin/curl" <<'EOF'
+cat > "$stub_bin/curl" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 count=0
-if [ -f "$CURL_COUNT_FILE" ]; then
-  count="$(<"$CURL_COUNT_FILE")"
+if [ -f "$curl_count_file" ]; then
+  count="\$(<"$curl_count_file")"
 fi
-count=$((count + 1))
-printf '%s' "$count" > "$CURL_COUNT_FILE"
-if [ "$count" -lt 3 ]; then
+count=\$((count + 1))
+printf '%s' "\$count" > "$curl_count_file"
+if [ "\$count" -lt 3 ]; then
   printf 'warp=off\n'
 else
   printf 'warp=on\n'
@@ -53,18 +54,65 @@ EOF
 
 chmod +x "$stub_bin/warp-svc" "$stub_bin/warp-cli" "$stub_bin/curl" "$stub_bin/sleep"
 
+happy_stdout="$tmpdir/happy.stdout"
+happy_stderr="$tmpdir/happy.stderr"
 PATH="$stub_bin:$PATH" \
-CALLS_LOG="$calls_log" \
-CURL_COUNT_FILE="$curl_count_file" \
 WARP_TRACE_URL="https://example.test/trace" \
 WARP_MAX_ATTEMPTS=5 \
 WARP_RETRY_SECONDS=0 \
-bash "$ROOT/scripts/bootstrap-warp.sh"
+bash "$ROOT/scripts/bootstrap-warp.sh" >"$happy_stdout" 2>"$happy_stderr"
 
 assert_file_exists "$calls_log"
 assert_contains "$calls_log" 'warp-svc'
 assert_contains "$calls_log" 'registration show'
 assert_contains "$calls_log" 'registration new'
 assert_contains "$calls_log" 'connect'
+if grep -Fq 'registration show probe' "$happy_stdout"; then
+  fail 'expected registration show output to be suppressed'
+fi
+assert_contains "$happy_stdout" 'WARP is connected'
+
+missing_svc_stdout="$tmpdir/missing-svc.stdout"
+missing_svc_stderr="$tmpdir/missing-svc.stderr"
+missing_svc_bin="$tmpdir/missing-svc-bin"
+mkdir -p "$missing_svc_bin"
+cp "$stub_bin/warp-cli" "$missing_svc_bin/warp-cli"
+if PATH="$missing_svc_bin:$PATH" bash "$ROOT/scripts/bootstrap-warp.sh" >"$missing_svc_stdout" 2>"$missing_svc_stderr"; then
+  fail 'expected bootstrap-warp to fail when warp-svc is missing'
+fi
+assert_contains "$missing_svc_stderr" 'warp-svc not found'
+
+missing_cli_stdout="$tmpdir/missing-cli.stdout"
+missing_cli_stderr="$tmpdir/missing-cli.stderr"
+missing_cli_bin="$tmpdir/missing-cli-bin"
+mkdir -p "$missing_cli_bin"
+cp "$stub_bin/warp-svc" "$missing_cli_bin/warp-svc"
+if PATH="$missing_cli_bin:$PATH" bash "$ROOT/scripts/bootstrap-warp.sh" >"$missing_cli_stdout" 2>"$missing_cli_stderr"; then
+  fail 'expected bootstrap-warp to fail when warp-cli is missing'
+fi
+assert_contains "$missing_cli_stderr" 'warp-cli not found'
+
+fail_bin="$tmpdir/fail-bin"
+mkdir -p "$fail_bin"
+cp "$stub_bin/warp-svc" "$fail_bin/warp-svc"
+cp "$stub_bin/warp-cli" "$fail_bin/warp-cli"
+cp "$stub_bin/sleep" "$fail_bin/sleep"
+cat > "$fail_bin/curl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'warp=off\n'
+EOF
+chmod +x "$fail_bin/curl"
+
+fail_stdout="$tmpdir/fail.stdout"
+fail_stderr="$tmpdir/fail.stderr"
+if PATH="$fail_bin:$PATH" \
+  WARP_TRACE_URL="https://example.test/trace" \
+  WARP_MAX_ATTEMPTS=2 \
+  WARP_RETRY_SECONDS=0 \
+  bash "$ROOT/scripts/bootstrap-warp.sh" >"$fail_stdout" 2>"$fail_stderr"; then
+  fail 'expected bootstrap-warp to fail when WARP never connects'
+fi
+assert_contains "$fail_stderr" 'WARP failed to connect after 2 attempts'
 
 echo "PASS test-bootstrap-warp"

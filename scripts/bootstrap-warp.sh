@@ -6,12 +6,12 @@ max_attempts="${WARP_MAX_ATTEMPTS:-20}"
 retry_seconds="${WARP_RETRY_SECONDS:-2}"
 
 command -v warp-svc >/dev/null 2>&1 || {
-  echo "warp-svc is required" >&2
+  echo "warp-svc not found" >&2
   exit 1
 }
 
 command -v warp-cli >/dev/null 2>&1 || {
-  echo "warp-cli is required" >&2
+  echo "warp-cli not found" >&2
   exit 1
 }
 
@@ -19,12 +19,14 @@ warp-svc >/tmp/warp-svc.log 2>&1 &
 svc_pid=$!
 
 cleanup() {
-  kill "$svc_pid" 2>/dev/null || true
+  if kill -0 "$svc_pid" 2>/dev/null; then
+    kill "$svc_pid" 2>/dev/null || true
+  fi
 }
 
 trap cleanup EXIT
 
-if ! warp-cli registration show; then
+if ! warp-cli registration show >/dev/null 2>&1; then
   warp-cli registration new
 fi
 
@@ -42,5 +44,5 @@ while [ "$attempt" -le "$max_attempts" ]; do
   attempt=$((attempt + 1))
 done
 
-echo "WARP failed to connect after $max_attempts attempts"
+echo "WARP failed to connect after $max_attempts attempts" >&2
 exit 1
