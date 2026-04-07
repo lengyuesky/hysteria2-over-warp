@@ -12,7 +12,7 @@ stub_bin="$tmpdir/bin"
 output_dir="$tmpdir/output"
 calls_log="$tmpdir/calls.log"
 cert_dir="$output_dir/certs"
-config_path="$output_dir/config/config.yaml"
+config_path="$output_dir/config.yaml"
 
 mkdir -p "$app_root/scripts" "$app_root/config" "$stub_bin" "$output_dir"
 
@@ -35,7 +35,7 @@ cat > "$app_root/scripts/render-hysteria-config.sh" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 printf 'render %s %s\n' "\$1" "\$2" >> "$calls_log"
-mkdir -p "\$(dirname "\$2")"
+mkdir -p "\$(dirname "$tmpdir/output/config.yaml")"
 printf 'listen: ":443"\n' > "\$2"
 EOF
 
