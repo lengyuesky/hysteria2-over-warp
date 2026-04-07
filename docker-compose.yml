@@ -3,6 +3,8 @@ services:
     build:
       context: .
     image: ghcr.io/${GHCR_NAMESPACE}/hysteria2-over-warp:${IMAGE_TAG}
+    env_file:
+      - .env
     cap_add:
       - NET_ADMIN
     devices:
